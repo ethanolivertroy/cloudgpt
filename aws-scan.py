@@ -36,9 +36,12 @@ def redact_policy(policy):
 
 def check_policy(policy):
     prompt = f'Does this AWS policy have any security vulnerabilities: \n{policy.redacted_document}'
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a cloud security expert. Analyze the policy and determine if it has security vulnerabilities. Start your response with 'Yes,' if it has vulnerabilities or 'No,' if it does not."},
+            {"role": "user", "content": prompt}
+        ],
         temperature=0.5,
         max_tokens=1000,
         top_p=1,
@@ -46,7 +49,7 @@ def check_policy(policy):
         presence_penalty=0.0,
         stream=False,
     )
-    policy.ai_response = response.choices[0]['text'].strip()
+    policy.ai_response = response.choices[0].message['content'].strip()
     is_vulnerable = policy.is_vulnerable()
     log(f'Policy {policy.name} [{is_vulnerable}]')
 
@@ -58,7 +61,9 @@ def preserve(filename, results):
     mode = 'a' if os.path.exists(filename) else 'w'
 
     log(f'Saving scan: {filename}')
-
+    
+    os.makedirs('cache', exist_ok=True)
+    
     with open(filename, mode) as f:
         writer = csv.DictWriter(f, fieldnames=header)
         if mode == 'w':

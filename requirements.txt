@@ -1,2 +1,8 @@
 boto3
 openai
+azure-identity
+azure-mgmt-resource
+azure-mgmt-authorization
+google-cloud-storage
+google-cloud-resource-manager
+google-cloud-iam

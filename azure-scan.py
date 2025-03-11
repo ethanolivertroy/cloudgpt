@@ -35,9 +35,12 @@ def redact_policy(policy):
 
 def check_policy(policy):
     prompt = f'Does this Azure policy have any security vulnerabilities: \n{policy.redacted_document}'
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are a cloud security expert. Analyze the policy and determine if it has security vulnerabilities. Start your response with 'Yes,' if it has vulnerabilities or 'No,' if it does not."},
+            {"role": "user", "content": prompt}
+        ],
         temperature=0.5,
         max_tokens=1000,
         top_p=1,
@@ -45,7 +48,7 @@ def check_policy(policy):
         presence_penalty=0.0,
         stream=False,
     )
-    policy.ai_response = response.choices[0]['text'].strip()
+    policy.ai_response = response.choices[0].message['content'].strip()
     is_vulnerable = policy.is_vulnerable()
     log(f'Policy {policy.name} [{is_vulnerable}]')
 
@@ -83,6 +86,81 @@ def main(args):
 
     log(f'Retrieving and redacting policies for subscription: {args.subscription_id}')
 
+    # Import the authorization management client
+    from azure.mgmt.authorization import AuthorizationManagementClient
+    authorization_client = AuthorizationManagementClient(credential, args.subscription_id)
+    
+    # Create cache directory if it doesn't exist
+    os.makedirs('cache', exist_ok=True)
+    
     # Iterate over all policies in all resource groups
     for group in resource_client.resource_groups.list():
-       
+        resource_group_name = group.name
+        log(f'Scanning resource group: {resource_group_name}')
+        
+        # Get policy assignments for the resource group
+        policy_assignments = authorization_client.policy_assignments.list_for_resource_group(
+            resource_group_name=resource_group_name
+        )
+        
+        for assignment in policy_assignments:
+            policy_id = assignment.policy_definition_id
+            
+            try:
+                # Extract policy definition ID
+                definition_id = policy_id.split('/')[-1]
+                
+                # Get the policy definition
+                policy_definition = authorization_client.policy_definitions.get(definition_id)
+                
+                p = Policy()
+                p.subscription_id = args.subscription_id
+                p.resource_group = resource_group_name
+                p.name = assignment.name
+                p.id = assignment.id
+                p.policy = policy_definition.policy_rule
+                
+                if args.redact:
+                    p = redact_policy(p)
+                    p = check_policy(p)
+                
+                results.append(p)
+                
+            except Exception as e:
+                log(f'Error processing policy {assignment.name}: {str(e)}')
+    
+    # Also scan subscription-level policy assignments
+    subscription_policies = authorization_client.policy_assignments.list_for_subscription()
+    
+    for assignment in subscription_policies:
+        policy_id = assignment.policy_definition_id
+        
+        try:
+            # Extract policy definition ID
+            definition_id = policy_id.split('/')[-1]
+            
+            # Get the policy definition
+            policy_definition = authorization_client.policy_definitions.get(definition_id)
+            
+            p = Policy()
+            p.subscription_id = args.subscription_id
+            p.resource_group = "subscription-level"
+            p.name = assignment.name
+            p.id = assignment.id
+            p.policy = policy_definition.policy_rule
+            
+            if args.redact:
+                p = redact_policy(p)
+                p = check_policy(p)
+            
+            results.append(p)
+            
+        except Exception as e:
+            log(f'Error processing policy {assignment.name}: {str(e)}')
+    
+    scan_utc = datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
+    preserve(f'cache/{args.subscription_id}_{scan_utc}.csv', results)
+
+if __name__ == '__main__':
+    args = parser.parse_args()
+    main(args)

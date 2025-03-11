@@ -1,14 +1,26 @@
 class Policy:
     def __init__(self):
-        self.account = None
-        self.arn = None
+        # Common fields
         self.name = None
-        self.version = None
         self.policy = None
         self.original_document = None
         self.redacted_document = None
         self.ai_response = None
         self.account_mapping = {}
+        
+        # AWS specific
+        self.account = None
+        self.arn = None
+        self.version = None
+        
+        # Azure specific
+        self.subscription_id = None
+        self.resource_group = None
+        self.id = None
+        
+        # GCP specific
+        self.project_id = None
+        self.policy_type = None
 
     def __repr__(self):
         return 'Policy()'
