@@ -6,7 +6,8 @@ Scan AWS, Azure, and GCP policies for vulnerabilities using AI.
 
 This tool automatically redacts sensitive information like account numbers and project IDs by replacing them with randomly generated values before sending the policies for analysis. Knowledge of a vulnerable policy without knowledge of the specific account that has the policy provisioned is useless to the AI service. Additionally, the internal prompt has continually returned responses starting with Yes or No, therefore, we parse this portion of the response to determine vulnerability. Those using the tool should manually review the responses in the output to determine context of the response. It's not perfect but it's absolutely helpful.
 
-Follow me on Twitter ([Mike Felch - @ustayready](https://twitter.com/ustayready)) 
+## Credits ##
+Originally created by [Mike Felch (@ustayready)](https://twitter.com/ustayready) - [Original Repository](https://github.com/ustayready/cloudgpt) 
 
 ## Basic Usage ##
 ### Requires OpenAI API key
