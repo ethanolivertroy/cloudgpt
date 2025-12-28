@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Policy Graph Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/neo4j-driver"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Cloud Policy Graph Visualization</h1>
+            <p>Interactive graph visualization of cloud IAM policies</p>
+        </header>
+
+        <div class="connection-panel">
+            <h2>Neo4j Connection</h2>
+            <div class="connection-form">
+                <input type="text" id="neo4j-uri" placeholder="bolt://localhost:7687" value="bolt://localhost:7687">
+                <input type="text" id="neo4j-user" placeholder="Username" value="neo4j">
+                <input type="password" id="neo4j-password" placeholder="Password" value="cloudpolicy123">
+                <button id="connect-btn">Connect</button>
+                <span id="connection-status"></span>
+            </div>
+        </div>
+
+        <div class="query-panel">
+            <h2>Queries</h2>
+            <div class="query-buttons">
+                <button class="query-btn" data-query="all-policies">All Policies</button>
+                <button class="query-btn" data-query="vulnerable">Vulnerable Policies</button>
+                <button class="query-btn" data-query="admin-access">Admin Access</button>
+                <button class="query-btn" data-query="public-access">Public Access</button>
+                <button class="query-btn" data-query="wildcard">Wildcard Permissions</button>
+                <button class="query-btn" data-query="attack-paths">Attack Paths</button>
+            </div>
+
+            <div class="custom-query">
+                <textarea id="custom-cypher" placeholder="Enter custom Cypher query..."
+                    rows="4">MATCH (n) RETURN n LIMIT 100</textarea>
+                <button id="run-query-btn">Run Custom Query</button>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <h2>Database Statistics</h2>
+            <div id="stats" class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-nodes">-</div>
+                    <div class="stat-label">Total Nodes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-principals">-</div>
+                    <div class="stat-label">Principals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-resources">-</div>
+                    <div class="stat-label">Resources</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-policies">-</div>
+                    <div class="stat-label">Policies</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-actions">-</div>
+                    <div class="stat-label">Actions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-vulnerable">-</div>
+                    <div class="stat-label">Vulnerable</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="graph-panel">
+            <h2>Graph Visualization</h2>
+            <div id="graph-container"></div>
+        </div>
+
+        <div class="results-panel">
+            <h2>Query Results</h2>
+            <div id="results"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

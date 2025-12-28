@@ -22,6 +22,14 @@ try:
 except ImportError:
     CREW_AVAILABLE = False
 
+# Import Neo4j graph support (optional)
+try:
+    from core.neo4j_client import create_neo4j_client_from_config
+    from core.graph_builder import GraphBuilder
+    NEO4J_AVAILABLE = True
+except ImportError:
+    NEO4J_AVAILABLE = False
+
 
 class ScannerBase(ABC):
     """Abstract base class for cloud policy scanners."""
@@ -41,7 +49,10 @@ class ScannerBase(ABC):
         self.config = self._load_config(config_path)
         self.logger = self._setup_logging()
         self.obfuscation_engine: Optional[ObfuscationEngine] = None
+        self.neo4j_client = None
+        self.graph_builder = None
         self._init_obfuscation()
+        self._init_neo4j()
 
     def _load_config(self, config_path: str) -> dict:
         """Load configuration from YAML file."""
@@ -108,6 +119,19 @@ class ScannerBase(ABC):
                 audit_log=obf_config.get('audit_log', True)
             )
 
+    def _init_neo4j(self):
+        """Initialize Neo4j client and graph builder based on configuration."""
+        if not NEO4J_AVAILABLE:
+            return
+
+        try:
+            self.neo4j_client = create_neo4j_client_from_config(self.config)
+            if self.neo4j_client:
+                self.graph_builder = GraphBuilder(self.neo4j_client, self.provider)
+                self.log('Neo4j graph database initialized successfully')
+        except Exception as e:
+            self.logger.warning(f'Neo4j initialization failed: {str(e)}')
+
     def log(self, message: str):
         """Log a message (backwards compatible with old print-based logging)."""
         self.logger.info(message)
@@ -122,6 +146,42 @@ class ScannerBase(ABC):
             filename = obf_config.get('audit_filename', 'cache/redaction_audit.json')
             self.obfuscation_engine.export_audit_log(filename)
             self.log(f'Exported obfuscation audit log to {filename}')
+
+    def export_to_neo4j(self):
+        """Export scan results to Neo4j graph database."""
+        if not self.graph_builder or not self.neo4j_client:
+            return
+
+        self.log(f'Exporting {len(self.results)} policies to Neo4j graph database...')
+
+        total_stats = {
+            'principals': 0,
+            'resources': 0,
+            'actions': 0,
+            'policies': 0,
+            'relationships': 0
+        }
+
+        for policy in self.results:
+            try:
+                stats = self.graph_builder.build_policy_graph(policy)
+                for key in total_stats:
+                    total_stats[key] += stats.get(key, 0)
+            except Exception as e:
+                self.logger.error(f'Error exporting policy {policy.name} to Neo4j: {str(e)}')
+                continue
+
+        # Get final database statistics
+        db_stats = self.neo4j_client.get_statistics()
+
+        self.log(f'Neo4j export complete:')
+        self.log(f'  - Created {total_stats["principals"]} principals')
+        self.log(f'  - Created {total_stats["resources"]} resources')
+        self.log(f'  - Created {total_stats["actions"]} actions')
+        self.log(f'  - Created {total_stats["policies"]} policies')
+        self.log(f'  - Created {total_stats["relationships"]} relationships')
+        self.log(f'  - Total nodes in database: {db_stats.get("total_nodes", 0)}')
+        self.log(f'  - Total relationships: {db_stats.get("relationships", 0)}')
 
     def check_policy(self, policy: Policy, cloud_provider: str) -> Policy:
         """

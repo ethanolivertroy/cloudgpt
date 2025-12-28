@@ -1,0 +1,272 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+header h1 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+header p {
+    color: #666;
+}
+
+.connection-panel,
+.query-panel,
+.stats-panel,
+.graph-panel,
+.results-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+h2 {
+    color: #333;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.connection-form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.connection-form input {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.connection-form input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+button {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #5568d3;
+}
+
+button:active {
+    background: #4451b8;
+}
+
+#connection-status {
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#connection-status.connected {
+    background: #d4edda;
+    color: #155724;
+}
+
+#connection-status.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.query-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.query-btn {
+    background: #764ba2;
+}
+
+.query-btn:hover {
+    background: #654192;
+}
+
+.custom-query {
+    margin-top: 15px;
+}
+
+#custom-cypher {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    resize: vertical;
+}
+
+#custom-cypher:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+#run-query-btn {
+    margin-top: 10px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+#graph-container {
+    width: 100%;
+    height: 600px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    background: #f8f9fa;
+    position: relative;
+}
+
+#results {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.result-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.result-item h3 {
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 16px;
+}
+
+.result-item pre {
+    background: #282c34;
+    color: #abb2bf;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    font-size: 12px;
+}
+
+.vulnerable {
+    border-left-color: #dc3545;
+}
+
+.safe {
+    border-left-color: #28a745;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #dc3545;
+}
+
+.node {
+    cursor: pointer;
+    stroke: #fff;
+    stroke-width: 2px;
+}
+
+.node.Principal {
+    fill: #667eea;
+}
+
+.node.Resource {
+    fill: #28a745;
+}
+
+.node.Action {
+    fill: #ffc107;
+}
+
+.node.Policy {
+    fill: #764ba2;
+}
+
+.node.Policy.vulnerable {
+    fill: #dc3545;
+}
+
+.link {
+    stroke: #999;
+    stroke-opacity: 0.6;
+    stroke-width: 1.5px;
+}
+
+.node-label {
+    font-size: 10px;
+    pointer-events: none;
+    text-anchor: middle;
+}

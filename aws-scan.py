@@ -153,6 +153,9 @@ class AWSScanner(ScannerBase):
         # Export obfuscation audit log if enabled
         self.export_obfuscation_audit()
 
+        # Export to Neo4j graph database if enabled
+        self.export_to_neo4j()
+
 
 def main(args):
     """Main entry point for AWS scanner."""
