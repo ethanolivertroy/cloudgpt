@@ -1,0 +1,49 @@
+# llm-cloudpolicy-scanner Configuration
+
+llm:
+  provider: openai
+  model: gpt-4
+  temperature: 0.5
+  max_tokens: 1000
+  top_p: 1
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+  stream: false
+
+multi_agent:
+  enabled: false  # Set to true when Phase 4 is implemented
+  framework: crewai  # Options: crewai, beeai
+  agents:
+    - iam_analyst
+    - network_security
+    - data_protection
+    - compliance
+
+obfuscation:
+  enabled: true
+  consistent_mapping: true
+  audit_log: true
+
+neo4j:
+  enabled: false  # Set to true when Phase 5 is implemented
+  uri: bolt://localhost:7687
+  username: neo4j
+  password_env: NEO4J_PASSWORD
+  database: cloudpolicies
+
+output:
+  formats:
+    - csv
+  directory: ./cache
+  include_timestamp: true
+
+scanning:
+  parallel: false  # Set to true when Phase 6 is implemented
+  max_workers: 5
+  resume_on_failure: false
+
+logging:
+  level: INFO
+  format: "[%(levelname)s] %(message)s"
+  file: scan.log
+  console: true

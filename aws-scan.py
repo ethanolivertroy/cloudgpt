@@ -1,136 +1,175 @@
-from openai import OpenAI
+"""
+AWS IAM Policy Scanner
+Scans customer-managed IAM policies for security vulnerabilities using AI analysis.
+"""
+
 import boto3
 import argparse
 import re
 import os
-import csv
 import random
-from core.policy import *
-from datetime import datetime
+from core.policy import Policy
+from core.scanner_base import ScannerBase
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-parser = argparse.ArgumentParser(description='Retrieve all customer managed policies and check the default policy version for vulnerabilities')
-parser.add_argument('--key', type=str, required=False, help='OpenAI API key (can also use OPENAI_API_KEY environment variable)')
-parser.add_argument('--profile', type=str, default='default', help='AWS profile name to use (default: default)')
-parser.add_argument('--redact', action='store_true', default=True, help='Redact sensitive information in the policy document (default: True)')
 
-results = []
+class AWSScanner(ScannerBase):
+    """Scanner for AWS IAM policies."""
 
+    def __init__(self, api_key: str, profile: str = 'default'):
+        """
+        Initialize AWS scanner.
 
-def redact_policy(policy):
-    new_policy = policy
-    new_policy.original_document = str(policy.policy)
+        Args:
+            api_key: OpenAI API key
+            profile: AWS profile name to use
+        """
+        super().__init__(api_key)
+        self.session = boto3.Session(profile_name=profile)
+        self.iam_client = self.session.client('iam')
+        self.sts_client = self.session.client('sts')
+        self.account = self.sts_client.get_caller_identity().get('Account')
 
-    match = re.search(r'\b\d{12}\b', new_policy.original_document)
-    if match:
-        original_account = match.group()
-        new_account = random.randint(100000000000, 999999999999)
-        new_policy.map_accounts(original_account, new_account)
-        new_policy.redacted_document = new_policy.original_document.replace(original_account, str(new_account))
-    else:
-        new_policy.redacted_document = new_policy.original_document
+    def redact_policy(self, policy: Policy) -> Policy:
+        """
+        Redact AWS account IDs from policy document.
 
-    return new_policy
+        Args:
+            policy: Policy object to redact
 
+        Returns:
+            Policy object with redacted_document populated
+        """
+        new_policy = policy
+        new_policy.original_document = str(policy.policy)
 
-def check_policy(policy, openai_client):
-    prompt = f'Does this AWS policy have any security vulnerabilities: \n{policy.redacted_document}'
-    response = openai_client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a cloud security expert. Analyze the policy and determine if it has security vulnerabilities. Start your response with 'Yes,' if it has vulnerabilities or 'No,' if it does not."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.5,
-        max_tokens=1000,
-        top_p=1,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stream=False,
-    )
-    policy.ai_response = response.choices[0].message.content.strip()
-    is_vulnerable = policy.is_vulnerable()
-    log(f'Policy {policy.name} [{is_vulnerable}]')
+        # Find and replace 12-digit AWS account numbers
+        match = re.search(r'\b\d{12}\b', new_policy.original_document)
+        if match:
+            original_account = match.group()
+            new_account = random.randint(100000000000, 999999999999)
+            new_policy.map_accounts(original_account, new_account)
+            new_policy.redacted_document = new_policy.original_document.replace(
+                original_account, str(new_account)
+            )
+        else:
+            new_policy.redacted_document = new_policy.original_document
 
-    return policy
+        return new_policy
 
+    def scan(self, redact: bool = True):
+        """
+        Scan all customer-managed IAM policies in the AWS account.
 
-def preserve(filename, results):
-    header = ['account', 'name', 'arn', 'version', 'vulnerable', 'policy', 'mappings']
-    mode = 'a' if os.path.exists(filename) else 'w'
+        Args:
+            redact: Whether to redact sensitive information (default: True)
+        """
+        self.log(f'Retrieving and redacting policies for account: {self.account}')
 
-    log(f'Saving scan: {filename}')
+        try:
+            paginator = self.iam_client.get_paginator('list_policies')
+            response_iterator = paginator.paginate(Scope='Local', OnlyAttached=False)
 
-    os.makedirs('cache', exist_ok=True)
+            for response in response_iterator:
+                for policy_data in response['Policies']:
+                    try:
+                        policy_name = policy_data['PolicyName']
+                        policy_arn = policy_data['Arn']
 
-    with open(filename, mode) as f:
-        writer = csv.DictWriter(f, fieldnames=header)
-        if mode == 'w':
-            writer.writeheader()
-            for data in results:
-                mappings = '' if len(data.retrieve_mappings()) == 0 else data.retrieve_mappings()
-                row = {
-                    'account': data.account, 'name': data.name, 'arn': data.arn,
-                    'version': data.version, 'vulnerable': data.ai_response, 'policy':
-                    data.redacted_document, 'mappings': mappings
-                }
-                writer.writerow(row)
+                        # Skip AWS-managed policies
+                        if policy_arn.startswith("arn:aws:iam::aws"):
+                            continue
 
+                        policy_version = self.iam_client.get_policy_version(
+                            PolicyArn=policy_data['Arn'],
+                            VersionId=policy_data['DefaultVersionId']
+                        )
+                        default_version = policy_version['PolicyVersion']['VersionId']
 
-def log(data):
-    print(f'[*] {data}')
+                        # Create Policy object
+                        p = Policy()
+                        p.account = self.account
+                        p.arn = policy_arn
+                        p.name = policy_name
+                        p.policy = policy_version['PolicyVersion']['Document']
+                        p.version = default_version
+
+                        if redact:
+                            p = self.redact_policy(p)
+                            p = self.check_policy(p, 'AWS')
+
+                        self.results.append(p)
+
+                    except Exception as e:
+                        self.logger.error(f'Error processing policy {policy_name}: {str(e)}')
+                        continue
+
+        except Exception as e:
+            self.logger.error(f'Error scanning AWS policies: {str(e)}')
+            raise
+
+    def save_results(self):
+        """Save scan results to CSV file."""
+        scan_timestamp = self.get_scan_timestamp()
+        filename = f'cache/{self.account}_{scan_timestamp}.csv'
+
+        header = ['account', 'name', 'arn', 'version', 'vulnerable', 'policy', 'mappings']
+
+        def row_builder(data):
+            mappings = '' if len(data.retrieve_mappings()) == 0 else data.retrieve_mappings()
+            return {
+                'account': data.account,
+                'name': data.name,
+                'arn': data.arn,
+                'version': data.version,
+                'vulnerable': data.ai_response,
+                'policy': data.redacted_document,
+                'mappings': mappings
+            }
+
+        self.preserve(filename, header, self.results, row_builder)
 
 
 def main(args):
+    """Main entry point for AWS scanner."""
     # Get API key with priority: CLI arg > environment variable
     api_key = args.key or os.getenv('OPENAI_API_KEY')
     if not api_key:
-        raise ValueError("OpenAI API key is required. Provide it via --key argument or OPENAI_API_KEY environment variable.")
+        raise ValueError(
+            "OpenAI API key is required. Provide it via --key argument or OPENAI_API_KEY environment variable."
+        )
 
-    openai_client = OpenAI(api_key=api_key)
-    session = boto3.Session(profile_name=args.profile)
-    scan_utc = datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
-
-    client = session.client('iam')
-    account = session.client('sts').get_caller_identity().get('Account')
-
-    log(f'Retrieving and redacting policies for account: {account}')
-
-    paginator = client.get_paginator('list_policies')
-    response_iterator = paginator.paginate(Scope='Local', OnlyAttached=False)
-    for response in response_iterator:
-        for policy in response['Policies']:
-
-            policy_name = policy['PolicyName']
-
-            policy_arn = policy['Arn']
-            policy_version = client.get_policy_version(PolicyArn=policy['Arn'], VersionId=policy['DefaultVersionId'])
-            default_version = policy_version['PolicyVersion']['VersionId']
-
-            if not policy_arn.startswith("arn:aws:iam::aws"):
-                policy_document = ''
-
-                p = Policy()
-                p.account = account
-                p.arn = policy_arn
-                p.name = policy_name
-                p.policy = policy_version['PolicyVersion']['Document']
-                p.version = default_version
-
-                if args.redact:
-                    p = redact_policy(p)
-                    p = check_policy(p, openai_client)
-
-                results.append(p)
-
-    preserve(f'cache/{account}_{scan_utc}.csv', results)
+    # Create and run scanner
+    scanner = AWSScanner(api_key, profile=args.profile)
+    scanner.scan(redact=args.redact)
+    scanner.save_results()
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Retrieve all customer managed policies and check the default policy version for vulnerabilities'
+    )
+    parser.add_argument(
+        '--key',
+        type=str,
+        required=False,
+        help='OpenAI API key (can also use OPENAI_API_KEY environment variable)'
+    )
+    parser.add_argument(
+        '--profile',
+        type=str,
+        default='default',
+        help='AWS profile name to use (default: default)'
+    )
+    parser.add_argument(
+        '--redact',
+        action='store_true',
+        default=True,
+        help='Redact sensitive information in the policy document (default: True)'
+    )
+
     args = parser.parse_args()
     main(args)
-
-

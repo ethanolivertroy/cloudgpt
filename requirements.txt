@@ -12,3 +12,4 @@ openai==1.6.0
 
 # Environment & Configuration
 python-dotenv==1.0.0
+pyyaml==6.0.1
