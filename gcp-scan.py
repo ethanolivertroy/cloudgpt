@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 import argparse
 import re
 import os
@@ -9,14 +9,17 @@ from datetime import datetime
 from google.cloud import resourcemanager_v3
 from google.cloud import iam_v2
 from google.cloud.iam_admin_v1 import IAMClient
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 parser = argparse.ArgumentParser(description='Retrieve all GCP policies and check for vulnerabilities')
-parser.add_argument('--key', type=str, required=True, help='OpenAI API key')
-parser.add_argument('--project-id', type=str, required=False, help='GCP project ID (default: uses gcloud default)')
+parser.add_argument('--key', type=str, required=False, help='OpenAI API key (can also use OPENAI_API_KEY environment variable)')
+parser.add_argument('--project-id', type=str, required=False, help='GCP project ID (can also use GCP_PROJECT_ID environment variable)')
 parser.add_argument('--redact', action='store_true', default=True, help='Redact sensitive information in the policy document (default: True)')
 
 results = []
-openai.api_key = ''
 
 
 def redact_policy(policy):
@@ -36,9 +39,9 @@ def redact_policy(policy):
     return new_policy
 
 
-def check_policy(policy):
+def check_policy(policy, openai_client):
     prompt = f'Does this GCP policy have any security vulnerabilities: \n{policy.redacted_document}'
-    response = openai.ChatCompletion.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a cloud security expert. Analyze the policy and determine if it has security vulnerabilities. Start your response with 'Yes,' if it has vulnerabilities or 'No,' if it does not."},
@@ -51,7 +54,7 @@ def check_policy(policy):
         presence_penalty=0.0,
         stream=False,
     )
-    policy.ai_response = response.choices[0].message['content'].strip()
+    policy.ai_response = response.choices[0].message.content.strip()
     is_vulnerable = policy.is_vulnerable()
     log(f'Policy {policy.name} [{is_vulnerable}]')
 
@@ -65,7 +68,7 @@ def preserve(filename, results):
     log(f'Saving scan: {filename}')
 
     os.makedirs('cache', exist_ok=True)
-    
+
     with open(filename, mode) as f:
         writer = csv.DictWriter(f, fieldnames=header)
         if mode == 'w':
@@ -73,11 +76,11 @@ def preserve(filename, results):
         for data in results:
             mappings = '' if len(data.retrieve_mappings()) == 0 else data.retrieve_mappings()
             row = {
-                'project_id': data.project_id, 
-                'policy_type': data.policy_type, 
-                'name': data.name, 
-                'vulnerable': data.ai_response, 
-                'policy': data.original_document, 
+                'project_id': data.project_id,
+                'policy_type': data.policy_type,
+                'name': data.name,
+                'vulnerable': data.ai_response,
+                'policy': data.redacted_document,
                 'mappings': mappings
             }
             writer.writerow(row)
@@ -100,13 +103,13 @@ def scan_project_iam_policies(project_id, args):
         p.policy_type = "IAM"
         p.name = f"{project_id}-iam-policy"
         p.policy = policy
-        
+
         if args.redact:
             p = redact_policy(p)
-            p = check_policy(p)
-            
+            p = check_policy(p, openai_client)
+
         results.append(p)
-        
+
     except Exception as e:
         log(f"Error scanning IAM policies for project {project_id}: {str(e)}")
 
@@ -139,10 +142,10 @@ def scan_org_policies(project_id, args):
                 
                 if args.redact:
                     p = redact_policy(p)
-                    p = check_policy(p)
-                    
+                    p = check_policy(p, openai_client)
+
                 results.append(p)
-                
+
             except Exception as e:
                 log(f"Error getting policy for constraint {constraint.name}: {str(e)}")
                 
@@ -151,17 +154,18 @@ def scan_org_policies(project_id, args):
 
 
 def main(args):
-    openai.api_key = args.key
-    scan_utc = datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
-    
-    project_id = args.project_id
-    
+    # Get API key with priority: CLI arg > environment variable
+    api_key = args.key or os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError("OpenAI API key is required. Provide it via --key argument or OPENAI_API_KEY environment variable.")
+
+    # Get project ID with priority: CLI arg > environment variable
+    project_id = args.project_id or os.getenv('GCP_PROJECT_ID')
     if not project_id:
-        # Use default project
-        from google.cloud import resourcemanager_v3
-        client = resourcemanager_v3.ProjectsClient()
-        project = client.get_project(name="projects/my-project")
-        project_id = project.project_id
+        raise ValueError("GCP project ID is required. Provide it via --project-id argument or GCP_PROJECT_ID environment variable.")
+
+    openai_client = OpenAI(api_key=api_key)
+    scan_utc = datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
     
     log(f'Retrieving and redacting policies for GCP project: {project_id}')
     

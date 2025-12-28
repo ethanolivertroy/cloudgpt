@@ -1,4 +1,4 @@
-import openai
+from openai import OpenAI
 import boto3
 import argparse
 import re
@@ -7,15 +7,17 @@ import csv
 import random
 from core.policy import *
 from datetime import datetime
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 parser = argparse.ArgumentParser(description='Retrieve all customer managed policies and check the default policy version for vulnerabilities')
-parser.add_argument('--key', type=str, required=True, help='OpenAI API key')
+parser.add_argument('--key', type=str, required=False, help='OpenAI API key (can also use OPENAI_API_KEY environment variable)')
 parser.add_argument('--profile', type=str, default='default', help='AWS profile name to use (default: default)')
 parser.add_argument('--redact', action='store_true', default=True, help='Redact sensitive information in the policy document (default: True)')
 
 results = []
-openai.api_key = ''
 
 
 def redact_policy(policy):
@@ -34,9 +36,9 @@ def redact_policy(policy):
     return new_policy
 
 
-def check_policy(policy):
+def check_policy(policy, openai_client):
     prompt = f'Does this AWS policy have any security vulnerabilities: \n{policy.redacted_document}'
-    response = openai.ChatCompletion.create(
+    response = openai_client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a cloud security expert. Analyze the policy and determine if it has security vulnerabilities. Start your response with 'Yes,' if it has vulnerabilities or 'No,' if it does not."},
@@ -49,7 +51,7 @@ def check_policy(policy):
         presence_penalty=0.0,
         stream=False,
     )
-    policy.ai_response = response.choices[0].message['content'].strip()
+    policy.ai_response = response.choices[0].message.content.strip()
     is_vulnerable = policy.is_vulnerable()
     log(f'Policy {policy.name} [{is_vulnerable}]')
 
@@ -61,9 +63,9 @@ def preserve(filename, results):
     mode = 'a' if os.path.exists(filename) else 'w'
 
     log(f'Saving scan: {filename}')
-    
+
     os.makedirs('cache', exist_ok=True)
-    
+
     with open(filename, mode) as f:
         writer = csv.DictWriter(f, fieldnames=header)
         if mode == 'w':
@@ -71,9 +73,9 @@ def preserve(filename, results):
             for data in results:
                 mappings = '' if len(data.retrieve_mappings()) == 0 else data.retrieve_mappings()
                 row = {
-                    'account': data.account, 'name': data.name, 'arn': data.arn, 
-                    'version': data.version, 'vulnerable': data.ai_response, 'policy': 
-                    data.original_document, 'mappings': mappings
+                    'account': data.account, 'name': data.name, 'arn': data.arn,
+                    'version': data.version, 'vulnerable': data.ai_response, 'policy':
+                    data.redacted_document, 'mappings': mappings
                 }
                 writer.writerow(row)
 
@@ -83,7 +85,12 @@ def log(data):
 
 
 def main(args):
-    openai.api_key = args.key
+    # Get API key with priority: CLI arg > environment variable
+    api_key = args.key or os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        raise ValueError("OpenAI API key is required. Provide it via --key argument or OPENAI_API_KEY environment variable.")
+
+    openai_client = OpenAI(api_key=api_key)
     session = boto3.Session(profile_name=args.profile)
     scan_utc = datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
 
@@ -115,7 +122,7 @@ def main(args):
 
                 if args.redact:
                     p = redact_policy(p)
-                    p = check_policy(p)
+                    p = check_policy(p, openai_client)
 
                 results.append(p)
 
