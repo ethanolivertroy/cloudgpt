@@ -1,4 +1,4 @@
-CloudGPT
+llm-cloudpolicy-scanner
 ==================
 
 ## Multi-Cloud Policy Vulnerability Scanner ##
@@ -60,10 +60,10 @@ You can install and run with the following command:
 
 ```bash
 $ git clone https://github.com/ustayready/cloudgpt
-$ cd cloudgpt
-~/cloudgpt $ virtualenv -p python3 .
-~/cloudgpt $ source bin/activate
-(cloudgpt) ~/cloudgpt $ pip install -r requirements.txt
+$ cd llm-cloudpolicy-scanner
+~/llm-cloudpolicy-scanner $ virtualenv -p python3 .
+~/llm-cloudpolicy-scanner $ source bin/activate
+(llm-cloudpolicy-scanner) ~/llm-cloudpolicy-scanner $ pip install -r requirements.txt
 ```
 
 ## What's New in 2025 ##

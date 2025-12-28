@@ -166,3 +166,6 @@ cython_debug/
 
 # Local agent instructions
 AGENTS.md
+
+# Crush CLI data
+.crush/
