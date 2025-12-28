@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/ethanolivertroy/cloudgpt/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Security Issue
+    url: mailto:security@example.com
+    about: Please email security issues privately instead of opening a public issue

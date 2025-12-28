@@ -1,0 +1,109 @@
+name: Documentation
+description: Report missing, unclear, or incorrect documentation
+title: "[DOCS] "
+labels: ["type: documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation!
+
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: Documentation Type
+      description: What type of documentation needs attention?
+      options:
+        - README
+        - API Documentation
+        - Code Examples
+        - Architecture Guide
+        - CONTRIBUTING guide
+        - Tutorial/Guide
+        - Inline Code Comments
+        - Docstrings
+        - Configuration Documentation
+        - Deployment Guide
+        - Troubleshooting Guide
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Missing (documentation doesn't exist)
+        - Unclear (hard to understand)
+        - Incorrect (wrong information)
+        - Outdated (no longer accurate)
+        - Incomplete (missing important details)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How critical is this documentation issue?
+      options:
+        - High (blocks users from using features)
+        - Medium (causes confusion)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue?
+      placeholder: |
+        File: README.md, section "Configuration"
+        or
+        URL: https://github.com/ethanolivertroy/cloudgpt#usage
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's Wrong?
+      description: Describe the documentation issue
+      placeholder: |
+        The current documentation says...
+        But it should say...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Documentation
+      description: If you have suggestions for how to improve it, describe them here
+      placeholder: |
+        The documentation should include...
+        Example:
+        ```markdown
+        ## New Section
+        Description...
+        ```
+
+  - type: textarea
+    id: audience
+    attributes:
+      label: Target Audience
+      description: Who is this documentation for?
+      placeholder: |
+        - New users
+        - Contributors
+        - Advanced users
+        - System administrators
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples

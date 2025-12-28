@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests with coverage
+      run: |
+        pytest --cov=core --cov=agents --cov-report=xml --cov-report=term
+      continue-on-error: true  # Don't fail build yet, coverage is improving
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false  # Don't fail build on codecov upload errors
+
+  lint:
+    name: Lint and Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install linting dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black mypy bandit
+
+    - name: Run flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Check code formatting with black
+      run: |
+        black --check --line-length 100 .
+      continue-on-error: true
+
+    - name: Run mypy type checking
+      run: |
+        mypy core/ --ignore-missing-imports --no-strict-optional
+      continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install security scanning tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety
+
+    - name: Run bandit security scanner
+      run: |
+        bandit -r core/ agents/ -f json -o bandit-report.json
+      continue-on-error: true
+
+    - name: Convert bandit output to SARIF
+      uses: microsoft/bandit-sarif-formatter@v1
+      if: always()
+      with:
+        bandit-json: bandit-report.json
+        output-file: bandit.sarif
+
+    - name: Upload SARIF to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: bandit.sarif
+
+    - name: Check dependencies for vulnerabilities
+      run: |
+        safety check --json || true
+      continue-on-error: true
+
+  build:
+    name: Build and Validate
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Validate requirements.txt
+      run: |
+        pip check
+
+    - name: Test package imports
+      run: |
+        python -c "from core.policy import Policy; print('✓ core.policy')"
+        python -c "from core.obfuscation import ObfuscationEngine; print('✓ core.obfuscation')"
+        python -c "from core.scanner_base import ScannerBase; print('✓ core.scanner_base')"

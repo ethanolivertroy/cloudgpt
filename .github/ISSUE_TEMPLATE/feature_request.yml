@@ -1,0 +1,112 @@
+name: Feature Request
+description: Suggest a new feature or capability
+title: "[FEATURE] "
+labels: ["type: feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please describe your idea below.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component should this feature be added to?
+      options:
+        - Scanner (core scanning functionality)
+        - Agents (multi-agent AI analysis)
+        - Output Formats (JSON, HTML, SARIF, CSV)
+        - Graph Visualization (Neo4j)
+        - Obfuscation Engine
+        - Tests
+        - Documentation
+        - CI/CD
+        - New Component
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloud_provider
+    attributes:
+      label: Cloud Provider
+      description: Which cloud provider is this feature for?
+      options:
+        - AWS
+        - Azure
+        - GCP
+        - Multi-cloud
+        - Provider-agnostic
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature?
+      options:
+        - Critical (blocking other work)
+        - High (significant user impact)
+        - Medium (nice to have)
+        - Low (future consideration)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What pain point does it address?
+      placeholder: |
+        Currently, users face the issue of...
+        This makes it difficult to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you'd like this feature to work
+      placeholder: |
+        The feature should...
+        Users would be able to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: |
+        Alternative 1: ...
+        Alternative 2: ...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Provide code examples, screenshots, or mockups showing how this would work
+      placeholder: |
+        Example usage:
+        ```python
+        scanner.new_feature(...)
+        ```
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know when this feature is complete?
+      placeholder: |
+        - [ ] Users can...
+        - [ ] The feature includes tests
+        - [ ] Documentation is updated
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, links, or references about the feature request

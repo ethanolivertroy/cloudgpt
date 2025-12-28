@@ -1,0 +1,120 @@
+name: Enhancement
+description: Suggest an improvement to an existing feature
+title: "[ENHANCEMENT] "
+labels: ["type: enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an enhancement! Please describe your improvement idea below.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component should be enhanced?
+      options:
+        - Scanner (core scanning functionality)
+        - Agents (multi-agent AI analysis)
+        - Output Formats (JSON, HTML, SARIF, CSV)
+        - Graph Visualization (Neo4j)
+        - Obfuscation Engine
+        - Tests
+        - Documentation
+        - Performance
+        - Error Handling
+        - Logging
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cloud_provider
+    attributes:
+      label: Cloud Provider
+      description: Which cloud provider is this enhancement for?
+      options:
+        - AWS
+        - Azure
+        - GCP
+        - Multi-cloud
+        - Not Applicable
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this enhancement?
+      options:
+        - High (significant improvement)
+        - Medium (noticeable improvement)
+        - Low (minor improvement)
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: How does the feature currently work?
+      placeholder: |
+        Currently, the feature...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed Enhancement
+      description: How should it be improved?
+      placeholder: |
+        The enhancement would...
+        This would improve...
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What benefits will this enhancement provide?
+      placeholder: |
+        - Faster performance
+        - Better user experience
+        - Clearer error messages
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas on how to implement this?
+      placeholder: |
+        This could be implemented by...
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Affected Files
+      description: Which files would need to be modified?
+      placeholder: |
+        - core/scanner_base.py
+        - tests/test_scanner.py
+
+  - type: textarea
+    id: breaking
+    attributes:
+      label: Breaking Changes
+      description: Would this enhancement introduce any breaking changes?
+      placeholder: |
+        Yes/No
+        If yes, describe the changes and migration path...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the enhancement
