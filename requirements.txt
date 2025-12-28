@@ -17,6 +17,9 @@ crewai-tools==0.17.0
 # Graph Database
 neo4j==5.26.0
 
+# Progress & Performance
+tqdm==4.66.5
+
 # Environment & Configuration
 python-dotenv==1.0.1
 pyyaml==6.0.2

@@ -60,13 +60,16 @@ neo4j:
 output:
   formats:
     - csv
+    - json
+    - html
+    - sarif
   directory: ./cache
   include_timestamp: true
 
 scanning:
-  parallel: false  # Set to true when Phase 6 is implemented
-  max_workers: 5
-  resume_on_failure: false
+  parallel: true  # Parallel policy analysis
+  max_workers: 5  # Maximum concurrent threads
+  resume_on_failure: true  # Save checkpoints and allow resume
 
 logging:
   level: INFO

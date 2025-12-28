@@ -5,12 +5,16 @@ Eliminates code duplication across AWS, Azure, and GCP scanners.
 
 import os
 import csv
+import json
 import logging
+import pickle
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import List, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from openai import OpenAI
 import yaml
+from tqdm import tqdm
 
 from core.policy import Policy
 from core.obfuscation import ObfuscationEngine
@@ -29,6 +33,15 @@ try:
     NEO4J_AVAILABLE = True
 except ImportError:
     NEO4J_AVAILABLE = False
+
+# Import output format exporters (optional)
+try:
+    from core.output_formats.json_exporter import JSONExporter
+    from core.output_formats.html_exporter import HTMLExporter
+    from core.output_formats.sarif_exporter import SARIFExporter
+    EXPORTERS_AVAILABLE = True
+except ImportError:
+    EXPORTERS_AVAILABLE = False
 
 
 class ScannerBase(ABC):
@@ -51,6 +64,8 @@ class ScannerBase(ABC):
         self.obfuscation_engine: Optional[ObfuscationEngine] = None
         self.neo4j_client = None
         self.graph_builder = None
+        self.scan_start_time = None
+        self.scan_end_time = None
         self._init_obfuscation()
         self._init_neo4j()
 
@@ -319,6 +334,165 @@ class ScannerBase(ABC):
         if output_config.get('include_timestamp', True):
             return datetime.utcnow().strftime("%Y-%m-%d-%H%MZ")
         return ""
+
+    def process_policies_parallel(self, policies_to_process: List[Policy], cloud_provider: str) -> List[Policy]:
+        """
+        Process policies in parallel using thread pool.
+
+        Args:
+            policies_to_process: List of policies to analyze
+            cloud_provider: Cloud provider name
+
+        Returns:
+            List of processed policies
+        """
+        scanning_config = self.config.get('scanning', {})
+        max_workers = scanning_config.get('max_workers', 5)
+
+        if not scanning_config.get('parallel', False) or len(policies_to_process) < 2:
+            # Sequential processing with progress bar
+            return [self.check_policy(p, cloud_provider) for p in tqdm(policies_to_process, desc="Analyzing policies")]
+
+        # Parallel processing with progress bar
+        processed_policies = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(self.check_policy, policy, cloud_provider): policy
+                      for policy in policies_to_process}
+
+            with tqdm(total=len(policies_to_process), desc="Analyzing policies") as pbar:
+                for future in as_completed(futures):
+                    try:
+                        processed_policy = future.result()
+                        processed_policies.append(processed_policy)
+                    except Exception as e:
+                        policy = futures[future]
+                        self.logger.error(f'Error processing policy {policy.name} in parallel: {str(e)}')
+                    pbar.update(1)
+
+        return processed_policies
+
+    def save_checkpoint(self, checkpoint_file: str):
+        """
+        Save scan checkpoint for resume capability.
+
+        Args:
+            checkpoint_file: Path to checkpoint file
+        """
+        checkpoint_data = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'provider': self.provider,
+            'results_count': len(self.results),
+            'results': self.results
+        }
+
+        os.makedirs(os.path.dirname(checkpoint_file) if os.path.dirname(checkpoint_file) else '.', exist_ok=True)
+
+        with open(checkpoint_file, 'wb') as f:
+            pickle.dump(checkpoint_data, f)
+
+        self.log(f'Checkpoint saved: {checkpoint_file}')
+
+    def load_checkpoint(self, checkpoint_file: str) -> bool:
+        """
+        Load scan checkpoint to resume previous scan.
+
+        Args:
+            checkpoint_file: Path to checkpoint file
+
+        Returns:
+            True if checkpoint loaded successfully
+        """
+        if not os.path.exists(checkpoint_file):
+            return False
+
+        try:
+            with open(checkpoint_file, 'rb') as f:
+                checkpoint_data = pickle.load(f)
+
+            self.results = checkpoint_data.get('results', [])
+            self.log(f'Checkpoint loaded: {len(self.results)} policies restored from {checkpoint_file}')
+            return True
+
+        except Exception as e:
+            self.logger.error(f'Error loading checkpoint: {str(e)}')
+            return False
+
+    def export_multiple_formats(self, base_filename: str, metadata: dict = None):
+        """
+        Export scan results to multiple formats.
+
+        Args:
+            base_filename: Base filename without extension
+            metadata: Additional metadata to include
+        """
+        if not EXPORTERS_AVAILABLE:
+            self.logger.warning('Output format exporters not available')
+            return
+
+        output_config = self.config.get('output', {})
+        formats = output_config.get('formats', ['csv'])
+        output_dir = output_config.get('directory', './cache')
+
+        # Create metadata
+        scan_metadata = {
+            'provider': self.provider,
+            'scan_start': self.scan_start_time.isoformat() if self.scan_start_time else None,
+            'scan_end': self.scan_end_time.isoformat() if self.scan_end_time else None,
+            'scan_duration_seconds': (self.scan_end_time - self.scan_start_time).total_seconds()
+                                    if self.scan_start_time and self.scan_end_time else None,
+            **(metadata or {})
+        }
+
+        # Export to each format
+        for fmt in formats:
+            try:
+                if fmt == 'json':
+                    exporter = JSONExporter(output_dir)
+                    output_file = exporter.export(self.results, base_filename, scan_metadata)
+                    self.log(f'Exported to JSON: {output_file}')
+
+                elif fmt == 'html':
+                    exporter = HTMLExporter(output_dir)
+                    output_file = exporter.export(self.results, base_filename, scan_metadata)
+                    self.log(f'Exported to HTML: {output_file}')
+
+                elif fmt == 'sarif':
+                    exporter = SARIFExporter(output_dir)
+                    output_file = exporter.export(self.results, base_filename, scan_metadata)
+                    self.log(f'Exported to SARIF: {output_file}')
+
+            except Exception as e:
+                self.logger.error(f'Error exporting to {fmt}: {str(e)}')
+
+    def print_scan_summary(self):
+        """Print scan summary statistics."""
+        if not self.results:
+            self.log('No policies scanned')
+            return
+
+        vulnerable_count = sum(1 for p in self.results if p.is_vulnerable())
+        safe_count = len(self.results) - vulnerable_count
+
+        # Calculate scan duration
+        duration = None
+        if self.scan_start_time and self.scan_end_time:
+            duration = (self.scan_end_time - self.scan_start_time).total_seconds()
+
+        self.log('')
+        self.log('=' * 60)
+        self.log('SCAN SUMMARY')
+        self.log('=' * 60)
+        self.log(f'Provider: {self.provider.upper()}')
+        self.log(f'Total Policies: {len(self.results)}')
+        self.log(f'Vulnerable: {vulnerable_count} ({vulnerable_count/len(self.results)*100:.1f}%)')
+        self.log(f'Safe: {safe_count} ({safe_count/len(self.results)*100:.1f}%)')
+
+        if duration:
+            self.log(f'Scan Duration: {duration:.2f} seconds')
+            self.log(f'Average Time per Policy: {duration/len(self.results):.2f} seconds')
+
+        self.log('=' * 60)
+        self.log('')
 
     @abstractmethod
     def scan(self):

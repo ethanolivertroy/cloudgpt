@@ -155,10 +155,12 @@ class GCPScanner(ScannerBase):
             self.logger.error(f"Error listing constraints for project {self.project_id}: {str(e)}")
 
     def save_results(self):
-        """Save scan results to CSV file."""
+        """Save scan results to multiple formats."""
         scan_timestamp = self.get_scan_timestamp()
-        filename = f'cache/{self.project_id}_{scan_timestamp}.csv'
+        base_filename = f'{self.project_id}_{scan_timestamp}'
+        csv_filename = f'cache/{base_filename}.csv'
 
+        # Save CSV (backward compatibility)
         header = ['project_id', 'policy_type', 'name', 'vulnerable', 'policy', 'mappings']
 
         def row_builder(data):
@@ -172,13 +174,19 @@ class GCPScanner(ScannerBase):
                 'mappings': mappings
             }
 
-        self.preserve(filename, header, self.results, row_builder)
+        self.preserve(csv_filename, header, self.results, row_builder)
+
+        # Export to additional formats (JSON, HTML, SARIF)
+        self.export_multiple_formats(base_filename, {'project_id': self.project_id})
 
         # Export obfuscation audit log if enabled
         self.export_obfuscation_audit()
 
         # Export to Neo4j graph database if enabled
         self.export_to_neo4j()
+
+        # Print scan summary
+        self.print_scan_summary()
 
 
 def main(args):
@@ -199,7 +207,15 @@ def main(args):
 
     # Create and run scanner
     scanner = GCPScanner(api_key, project_id)
+
+    # Track scan timing
+    from datetime import datetime
+    scanner.scan_start_time = datetime.utcnow()
+
     scanner.scan(redact=args.redact)
+
+    scanner.scan_end_time = datetime.utcnow()
+
     scanner.save_results()
 
 
