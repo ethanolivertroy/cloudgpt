@@ -15,6 +15,13 @@ import yaml
 from core.policy import Policy
 from core.obfuscation import ObfuscationEngine
 
+# Import multi-agent support (optional)
+try:
+    from agents.orchestrator import analyze_policy_with_crew
+    CREW_AVAILABLE = True
+except ImportError:
+    CREW_AVAILABLE = False
+
 
 class ScannerBase(ABC):
     """Abstract base class for cloud policy scanners."""
@@ -118,11 +125,33 @@ class ScannerBase(ABC):
 
     def check_policy(self, policy: Policy, cloud_provider: str) -> Policy:
         """
-        Check a policy for vulnerabilities using OpenAI API.
+        Check a policy for vulnerabilities using AI analysis.
+
+        Supports both single-agent and multi-agent analysis based on configuration.
 
         Args:
             policy: Policy object to check
             cloud_provider: Name of cloud provider (AWS, Azure, GCP)
+
+        Returns:
+            Policy object with ai_response populated
+        """
+        llm_config = self.config.get('llm', {})
+        multi_agent_config = self.config.get('multi_agent', {})
+
+        # Check if multi-agent analysis is enabled
+        if multi_agent_config.get('enabled', False) and CREW_AVAILABLE:
+            return self._check_policy_multi_agent(policy, cloud_provider)
+        else:
+            return self._check_policy_single_agent(policy, cloud_provider)
+
+    def _check_policy_single_agent(self, policy: Policy, cloud_provider: str) -> Policy:
+        """
+        Check policy using single-agent OpenAI analysis (legacy method).
+
+        Args:
+            policy: Policy object to check
+            cloud_provider: Name of cloud provider
 
         Returns:
             Policy object with ai_response populated
@@ -151,11 +180,44 @@ class ScannerBase(ABC):
 
             policy.ai_response = response.choices[0].message.content.strip()
             is_vulnerable = policy.is_vulnerable()
-            self.log(f'Policy {policy.name} [{is_vulnerable}]')
+            self.log(f'Policy {policy.name} [Single-Agent: {is_vulnerable}]')
 
         except Exception as e:
             self.logger.error(f'Error checking policy {policy.name}: {str(e)}')
             policy.ai_response = f'ERROR: {str(e)}'
+
+        return policy
+
+    def _check_policy_multi_agent(self, policy: Policy, cloud_provider: str) -> Policy:
+        """
+        Check policy using multi-agent CrewAI analysis.
+
+        Args:
+            policy: Policy object to check
+            cloud_provider: Name of cloud provider
+
+        Returns:
+            Policy object with ai_response populated
+        """
+        try:
+            self.log(f'Running multi-agent analysis on policy {policy.name}...')
+
+            # Use OpenAI client for agents
+            result = analyze_policy_with_crew(
+                policy_document=policy.redacted_document,
+                cloud_provider=cloud_provider,
+                llm=self.openai_client,
+                verbose=self.config.get('multi_agent', {}).get('verbose', False)
+            )
+
+            policy.ai_response = result
+            is_vulnerable = policy.is_vulnerable()
+            self.log(f'Policy {policy.name} [Multi-Agent: {is_vulnerable}]')
+
+        except Exception as e:
+            self.logger.error(f'Error in multi-agent analysis for {policy.name}: {str(e)}')
+            self.logger.info(f'Falling back to single-agent analysis for {policy.name}')
+            return self._check_policy_single_agent(policy, cloud_provider)
 
         return policy
 

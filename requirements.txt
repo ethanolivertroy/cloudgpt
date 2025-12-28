@@ -10,6 +10,10 @@ google-cloud-iam==2.15.2
 # OpenAI API (v1.0+)
 openai==1.54.4
 
+# Multi-Agent AI Frameworks
+crewai==0.86.0
+crewai-tools==0.17.0
+
 # Environment & Configuration
 python-dotenv==1.0.1
 pyyaml==6.0.2

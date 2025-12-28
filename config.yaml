@@ -11,13 +11,15 @@ llm:
   stream: false
 
 multi_agent:
-  enabled: false  # Set to true when Phase 4 is implemented
-  framework: crewai  # Options: crewai, beeai
+  enabled: true  # Multi-agent analysis with CrewAI
+  framework: crewai
+  verbose: true  # Show detailed agent output
   agents:
     - iam_analyst
     - network_security
     - data_protection
     - compliance
+    - orchestrator
 
 obfuscation:
   enabled: true
