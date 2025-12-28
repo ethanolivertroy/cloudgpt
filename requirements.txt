@@ -24,6 +24,13 @@ tqdm==4.66.5
 python-dotenv==1.0.1
 pyyaml==6.0.2
 
+# Testing
+pytest==8.3.4
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+moto==5.0.21  # Mock AWS services
+responses==0.25.3  # Mock HTTP requests
+
 # Security: Ensure safe dependencies
 certifi>=2024.8.30
 urllib3>=2.2.3
