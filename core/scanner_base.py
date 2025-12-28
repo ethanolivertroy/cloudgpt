@@ -8,28 +8,33 @@ import csv
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from openai import OpenAI
 import yaml
 
 from core.policy import Policy
+from core.obfuscation import ObfuscationEngine
 
 
 class ScannerBase(ABC):
     """Abstract base class for cloud policy scanners."""
 
-    def __init__(self, api_key: str, config_path: str = "config.yaml"):
+    def __init__(self, api_key: str, provider: str, config_path: str = "config.yaml"):
         """
         Initialize the scanner with OpenAI client and configuration.
 
         Args:
             api_key: OpenAI API key
+            provider: Cloud provider name ('aws', 'azure', 'gcp')
             config_path: Path to configuration YAML file
         """
         self.openai_client = OpenAI(api_key=api_key)
+        self.provider = provider.lower()
         self.results: List[Policy] = []
         self.config = self._load_config(config_path)
         self.logger = self._setup_logging()
+        self.obfuscation_engine: Optional[ObfuscationEngine] = None
+        self._init_obfuscation()
 
     def _load_config(self, config_path: str) -> dict:
         """Load configuration from YAML file."""
@@ -86,9 +91,30 @@ class ScannerBase(ABC):
 
         return logger
 
+    def _init_obfuscation(self):
+        """Initialize obfuscation engine based on configuration."""
+        obf_config = self.config.get('obfuscation', {})
+        if obf_config.get('enabled', True):
+            self.obfuscation_engine = ObfuscationEngine(
+                provider=self.provider,
+                consistent_mapping=obf_config.get('consistent_mapping', True),
+                audit_log=obf_config.get('audit_log', True)
+            )
+
     def log(self, message: str):
         """Log a message (backwards compatible with old print-based logging)."""
         self.logger.info(message)
+
+    def export_obfuscation_audit(self):
+        """Export obfuscation audit log if enabled."""
+        if not self.obfuscation_engine:
+            return
+
+        obf_config = self.config.get('obfuscation', {})
+        if obf_config.get('export_audit', False):
+            filename = obf_config.get('audit_filename', 'cache/redaction_audit.json')
+            self.obfuscation_engine.export_audit_log(filename)
+            self.log(f'Exported obfuscation audit log to {filename}')
 
     def check_policy(self, policy: Policy, cloud_provider: str) -> Policy:
         """

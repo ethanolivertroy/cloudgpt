@@ -27,7 +27,7 @@ class AWSScanner(ScannerBase):
             api_key: OpenAI API key
             profile: AWS profile name to use
         """
-        super().__init__(api_key)
+        super().__init__(api_key, provider='aws')
         self.session = boto3.Session(profile_name=profile)
         self.iam_client = self.session.client('iam')
         self.sts_client = self.session.client('sts')
@@ -35,7 +35,7 @@ class AWSScanner(ScannerBase):
 
     def redact_policy(self, policy: Policy) -> Policy:
         """
-        Redact AWS account IDs from policy document.
+        Redact AWS sensitive information from policy document using enhanced obfuscation.
 
         Args:
             policy: Policy object to redact
@@ -46,17 +46,35 @@ class AWSScanner(ScannerBase):
         new_policy = policy
         new_policy.original_document = str(policy.policy)
 
-        # Find and replace 12-digit AWS account numbers
-        match = re.search(r'\b\d{12}\b', new_policy.original_document)
-        if match:
-            original_account = match.group()
-            new_account = random.randint(100000000000, 999999999999)
-            new_policy.map_accounts(original_account, new_account)
-            new_policy.redacted_document = new_policy.original_document.replace(
-                original_account, str(new_account)
+        # Use obfuscation engine if available
+        if self.obfuscation_engine:
+            # Get configured patterns for AWS
+            obf_config = self.config.get('obfuscation', {})
+            enabled_patterns = obf_config.get('aws_patterns', None)
+
+            # Perform redaction
+            redacted_text, mappings = self.obfuscation_engine.redact(
+                new_policy.original_document,
+                enabled_patterns=enabled_patterns
             )
+
+            new_policy.redacted_document = redacted_text
+
+            # Store mappings in policy object
+            for original, replacement in mappings.items():
+                new_policy.map_accounts(original, replacement)
         else:
-            new_policy.redacted_document = new_policy.original_document
+            # Fallback to basic redaction if obfuscation engine not available
+            match = re.search(r'\b\d{12}\b', new_policy.original_document)
+            if match:
+                original_account = match.group()
+                new_account = random.randint(100000000000, 999999999999)
+                new_policy.map_accounts(original_account, new_account)
+                new_policy.redacted_document = new_policy.original_document.replace(
+                    original_account, str(new_account)
+                )
+            else:
+                new_policy.redacted_document = new_policy.original_document
 
         return new_policy
 
@@ -131,6 +149,9 @@ class AWSScanner(ScannerBase):
             }
 
         self.preserve(filename, header, self.results, row_builder)
+
+        # Export obfuscation audit log if enabled
+        self.export_obfuscation_audit()
 
 
 def main(args):

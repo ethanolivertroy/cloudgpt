@@ -21,8 +21,32 @@ multi_agent:
 
 obfuscation:
   enabled: true
-  consistent_mapping: true
-  audit_log: true
+  consistent_mapping: true  # Same sensitive value always maps to same redacted value
+  audit_log: true  # Track all redactions for audit purposes
+  export_audit: false  # Export audit log to file
+  audit_filename: "cache/redaction_audit.json"
+  # Patterns to enable per provider (empty list = all patterns)
+  aws_patterns:
+    - account_id
+    - arn
+    - iam_user
+    - iam_role
+    - ipv4
+    - email
+  azure_patterns:
+    - subscription_id
+    - tenant_id
+    - resource_id
+    - principal_id
+    - ipv4
+    - email
+  gcp_patterns:
+    - project_id
+    - project_number
+    - service_account
+    - org_id
+    - ipv4
+    - email
 
 neo4j:
   enabled: false  # Set to true when Phase 5 is implemented

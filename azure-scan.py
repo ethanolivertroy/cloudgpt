@@ -29,7 +29,7 @@ class AzureScanner(ScannerBase):
             api_key: OpenAI API key
             subscription_id: Azure subscription ID
         """
-        super().__init__(api_key)
+        super().__init__(api_key, provider='azure')
         self.subscription_id = subscription_id
         self.credential = DefaultAzureCredential()
         self.resource_client = ResourceManagementClient(self.credential, subscription_id)
@@ -37,7 +37,7 @@ class AzureScanner(ScannerBase):
 
     def redact_policy(self, policy: Policy) -> Policy:
         """
-        Redact Azure subscription IDs (UUIDs) from policy document.
+        Redact Azure sensitive information from policy document using enhanced obfuscation.
 
         Args:
             policy: Policy object to redact
@@ -48,23 +48,39 @@ class AzureScanner(ScannerBase):
         new_policy = policy
         new_policy.original_document = str(policy.policy)
 
-        # Replace sensitive information (Azure subscription IDs are UUIDs)
-        # Pattern matches UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-        match = re.search(
-            r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-            new_policy.original_document,
-            re.IGNORECASE
-        )
-        if match:
-            original_subscription = match.group()
-            # Generate a random UUID for redaction
-            new_subscription = str(uuid.uuid4())
-            new_policy.map_accounts(original_subscription, new_subscription)
-            new_policy.redacted_document = new_policy.original_document.replace(
-                original_subscription, new_subscription
+        # Use obfuscation engine if available
+        if self.obfuscation_engine:
+            # Get configured patterns for Azure
+            obf_config = self.config.get('obfuscation', {})
+            enabled_patterns = obf_config.get('azure_patterns', None)
+
+            # Perform redaction
+            redacted_text, mappings = self.obfuscation_engine.redact(
+                new_policy.original_document,
+                enabled_patterns=enabled_patterns
             )
+
+            new_policy.redacted_document = redacted_text
+
+            # Store mappings in policy object
+            for original, replacement in mappings.items():
+                new_policy.map_accounts(original, replacement)
         else:
-            new_policy.redacted_document = new_policy.original_document
+            # Fallback to basic redaction if obfuscation engine not available
+            match = re.search(
+                r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+                new_policy.original_document,
+                re.IGNORECASE
+            )
+            if match:
+                original_subscription = match.group()
+                new_subscription = str(uuid.uuid4())
+                new_policy.map_accounts(original_subscription, new_subscription)
+                new_policy.redacted_document = new_policy.original_document.replace(
+                    original_subscription, new_subscription
+                )
+            else:
+                new_policy.redacted_document = new_policy.original_document
 
         return new_policy
 
@@ -172,6 +188,9 @@ class AzureScanner(ScannerBase):
             }
 
         self.preserve(filename, header, self.results, row_builder)
+
+        # Export obfuscation audit log if enabled
+        self.export_obfuscation_audit()
 
 
 def main(args):

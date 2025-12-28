@@ -29,13 +29,13 @@ class GCPScanner(ScannerBase):
             api_key: OpenAI API key
             project_id: GCP project ID
         """
-        super().__init__(api_key)
+        super().__init__(api_key, provider='gcp')
         self.project_id = project_id
         self.iam_client = IAMClient()
 
     def redact_policy(self, policy: Policy) -> Policy:
         """
-        Redact GCP project IDs from policy document.
+        Redact GCP sensitive information from policy document using enhanced obfuscation.
 
         Args:
             policy: Policy object to redact
@@ -46,18 +46,35 @@ class GCPScanner(ScannerBase):
         new_policy = policy
         new_policy.original_document = str(policy.policy)
 
-        # Replace project IDs in format "projects/{id}"
-        match = re.search(r'projects/([a-z0-9-]+)', new_policy.original_document)
-        if match:
-            original_project = match.group(1)
-            # Generate random project ID for redaction
-            new_project = f'project-{random.randint(10000, 99999)}'
-            new_policy.map_accounts(original_project, new_project)
-            new_policy.redacted_document = new_policy.original_document.replace(
-                original_project, new_project
+        # Use obfuscation engine if available
+        if self.obfuscation_engine:
+            # Get configured patterns for GCP
+            obf_config = self.config.get('obfuscation', {})
+            enabled_patterns = obf_config.get('gcp_patterns', None)
+
+            # Perform redaction
+            redacted_text, mappings = self.obfuscation_engine.redact(
+                new_policy.original_document,
+                enabled_patterns=enabled_patterns
             )
+
+            new_policy.redacted_document = redacted_text
+
+            # Store mappings in policy object
+            for original, replacement in mappings.items():
+                new_policy.map_accounts(original, replacement)
         else:
-            new_policy.redacted_document = new_policy.original_document
+            # Fallback to basic redaction if obfuscation engine not available
+            match = re.search(r'projects/([a-z0-9-]+)', new_policy.original_document)
+            if match:
+                original_project = match.group(1)
+                new_project = f'project-{random.randint(10000, 99999)}'
+                new_policy.map_accounts(original_project, new_project)
+                new_policy.redacted_document = new_policy.original_document.replace(
+                    original_project, new_project
+                )
+            else:
+                new_policy.redacted_document = new_policy.original_document
 
         return new_policy
 
@@ -156,6 +173,9 @@ class GCPScanner(ScannerBase):
             }
 
         self.preserve(filename, header, self.results, row_builder)
+
+        # Export obfuscation audit log if enabled
+        self.export_obfuscation_audit()
 
 
 def main(args):
