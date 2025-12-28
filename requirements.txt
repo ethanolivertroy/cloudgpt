@@ -1,15 +1,20 @@
 # Core Cloud SDK Dependencies
-boto3==1.34.0
-azure-identity==1.15.0
-azure-mgmt-resource==23.0.0
+boto3==1.35.36
+azure-identity==1.19.0
+azure-mgmt-resource==23.1.1
 azure-mgmt-authorization==4.0.0
-google-cloud-storage==2.14.0
-google-cloud-resource-manager==1.11.0
-google-cloud-iam==2.14.0
+google-cloud-storage==2.18.2
+google-cloud-resource-manager==1.13.1
+google-cloud-iam==2.15.2
 
 # OpenAI API (v1.0+)
-openai==1.6.0
+openai==1.54.4
 
 # Environment & Configuration
-python-dotenv==1.0.0
-pyyaml==6.0.1
+python-dotenv==1.0.1
+pyyaml==6.0.2
+
+# Security: Ensure safe dependencies
+certifi>=2024.8.30
+urllib3>=2.2.3
+requests>=2.32.3
