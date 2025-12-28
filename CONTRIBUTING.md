@@ -27,8 +27,8 @@ This project adheres to a code of conduct. By participating, you are expected to
 1. **Fork the repository** on GitHub
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/cloudgpt.git
-   cd cloudgpt
+   git clone https://github.com/YOUR-USERNAME/llm-cloudpolicy-scanner.git
+   cd llm-cloudpolicy-scanner
    ```
 
 3. **Add upstream remote**:

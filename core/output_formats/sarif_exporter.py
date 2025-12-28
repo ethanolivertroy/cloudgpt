@@ -42,7 +42,7 @@ class SARIFExporter(BaseExporter):
                     'tool': {
                         'driver': {
                             'name': 'llm-cloudpolicy-scanner',
-                            'informationUri': 'https://github.com/ethanolivertroy/cloudgpt',
+                            'informationUri': 'https://github.com/ethanolivertroy/llm-cloudpolicy-scanner',
                             'version': '1.0.0',
                             'semanticVersion': '1.0.0',
                             'rules': self._generate_rules()

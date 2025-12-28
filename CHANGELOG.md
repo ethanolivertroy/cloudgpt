@@ -235,7 +235,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for information on how to contribute to t
 
 ## Links
 
-- [GitHub Repository](https://github.com/ethanolivertroy/cloudgpt)
-- [Issue Tracker](https://github.com/ethanolivertroy/cloudgpt/issues)
-- [Pull Requests](https://github.com/ethanolivertroy/cloudgpt/pulls)
-- [Discussions](https://github.com/ethanolivertroy/cloudgpt/discussions)
+- [GitHub Repository](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner)
+- [Issue Tracker](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues)
+- [Pull Requests](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/pulls)
+- [Discussions](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/discussions)

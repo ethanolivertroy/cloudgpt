@@ -5,9 +5,9 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
-[![GitHub Issues](https://img.shields.io/github/issues/ethanolivertroy/cloudgpt)](https://github.com/ethanolivertroy/cloudgpt/issues)
-[![CI](https://github.com/ethanolivertroy/cloudgpt/workflows/CI/badge.svg)](https://github.com/ethanolivertroy/cloudgpt/actions)
-[![codecov](https://codecov.io/gh/ethanolivertroy/cloudgpt/branch/master/graph/badge.svg)](https://codecov.io/gh/ethanolivertroy/cloudgpt)
+[![GitHub Issues](https://img.shields.io/github/issues/ethanolivertroy/llm-cloudpolicy-scanner)](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues)
+[![CI](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/workflows/CI/badge.svg)](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/actions)
+[![codecov](https://codecov.io/gh/ethanolivertroy/llm-cloudpolicy-scanner/branch/master/graph/badge.svg)](https://codecov.io/gh/ethanolivertroy/llm-cloudpolicy-scanner)
 
 Scan AWS, Azure, and GCP cloud policies for security vulnerabilities using multi-agent AI analysis, advanced obfuscation, and graph database visualization.
 
@@ -50,8 +50,8 @@ Scan AWS, Azure, and GCP cloud policies for security vulnerabilities using multi
 
 ```bash
 # Clone the repository
-git clone https://github.com/ethanolivertroy/cloudgpt.git
-cd cloudgpt
+git clone https://github.com/ethanolivertroy/llm-cloudpolicy-scanner.git
+cd llm-cloudpolicy-scanner
 
 # Create virtual environment
 python -m venv venv
@@ -295,7 +295,7 @@ SARIF 2.1.0 format for CI/CD integration:
       "driver": {
         "name": "llm-cloudpolicy-scanner",
         "version": "2.0.0",
-        "informationUri": "https://github.com/ethanolivertroy/cloudgpt"
+        "informationUri": "https://github.com/ethanolivertroy/llm-cloudpolicy-scanner"
       }
     },
     "results": [
@@ -683,9 +683,9 @@ output_file = exporter.export(policies, 'scan_results', metadata={
 We welcome contributions! Here's how to get started:
 
 - **Getting Started**: See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style guidelines, testing requirements, and pull request process
-- **Good First Issues**: Check out issues labeled [`good first issue`](https://github.com/ethanolivertroy/cloudgpt/labels/good%20first%20issue)
-- **Feature Ideas**: See [ISSUES.md](ISSUES.md) for a comprehensive list of 36+ planned improvements across roadmap features, bug fixes, test coverage, code enhancements, and documentation
-- **Issue Templates**: Use our [issue templates](https://github.com/ethanolivertroy/cloudgpt/issues/new/choose) to report bugs or request features
+- **Good First Issues**: Check out issues labeled [`good first issue`](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/labels/good%20first%20issue)
+- **Feature Ideas**: Browse [GitHub Issues](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues) for 36+ planned improvements across roadmap features, bug fixes, test coverage, code enhancements, and documentation
+- **Issue Templates**: Use our [issue templates](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues/new/choose) to report bugs or request features
 
 ## Security
 
@@ -720,7 +720,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ### Upcoming Features
 
-See [ISSUES.md](ISSUES.md) for detailed implementation plans and [GitHub Issues](https://github.com/ethanolivertroy/cloudgpt/issues) for tracking.
+See [GitHub Issues](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues) for detailed implementation plans and tracking.
 
 **Roadmap Highlights:**
 - [ ] Terraform/Pulumi IaC scanning - Scan infrastructure-as-code before deployment
@@ -733,7 +733,7 @@ See [ISSUES.md](ISSUES.md) for detailed implementation plans and [GitHub Issues]
 - [ ] VS Code extension - Real-time policy validation in editor
 
 **Also Planned:**
-- 4 critical bug fixes (see [ISSUES.md](ISSUES.md#bug-fixes))
+- 4 critical bug fixes (see [GitHub Issues](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues?q=is%3Aissue+is%3Aopen+label%3A%22type%3A+bug%22))
 - 6 test coverage improvements (target: 70%+ coverage)
 - 10 code enhancements (caching, logging, performance optimization)
 - 8 documentation improvements (API docs, tutorials, deployment guides)
@@ -757,8 +757,8 @@ See [ISSUES.md](ISSUES.md) for detailed implementation plans and [GitHub Issues]
 ## Support
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/ethanolivertroy/cloudgpt/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/ethanolivertroy/cloudgpt/discussions)
+- **Issues**: [GitHub Issues](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ethanolivertroy/llm-cloudpolicy-scanner/discussions)
 
 ---
 
