@@ -77,13 +77,7 @@ class TestPolicy:
     def test_is_vulnerable_no_response(self):
         """Test vulnerability detection with no AI response"""
         policy = Policy()
-        # When ai_response is None, the method will raise TypeError
-        # This test documents the actual behavior
-        try:
-            result = policy.is_vulnerable()
-            assert False, "Should have raised TypeError"
-        except TypeError:
-            pass  # Expected behavior
+        assert policy.is_vulnerable() == "CHECK CSV"
 
     def test_is_vulnerable_empty_response(self):
         """Test vulnerability detection with empty response"""
