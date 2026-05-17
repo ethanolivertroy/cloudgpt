@@ -41,6 +41,8 @@ class Policy:
 
     def is_vulnerable(self):
         vulnerable = 'CHECK CSV'
+        if self.ai_response is None:
+            return vulnerable
         
         if 'Yes,' in self.ai_response:
             vulnerable = 'VULNERABLE'
