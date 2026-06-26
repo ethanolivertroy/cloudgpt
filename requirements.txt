@@ -1,39 +1,39 @@
 # Core Cloud SDK Dependencies
-boto3==1.35.36
-azure-identity==1.19.0
-azure-mgmt-resource==23.1.1
+boto3==1.43.36
+azure-identity==1.25.3
+azure-mgmt-resource==26.0.0
 azure-mgmt-authorization==4.0.0
-google-cloud-storage==2.18.2
-google-cloud-resource-manager==1.13.1
-google-cloud-iam==2.15.2
+google-cloud-storage==3.12.0
+google-cloud-resource-manager==1.18.0
+google-cloud-iam==2.24.0
 
 # OpenAI API (v1.0+)
-openai==1.54.4
+openai==2.44.0
 
 # Multi-Agent AI Frameworks
-crewai==0.86.0
-crewai-tools==0.17.0
+crewai==1.15.0
+crewai-tools==1.15.0
 
 # Graph Database
-neo4j==5.26.0
+neo4j==6.2.0
 
 # Progress & Performance
-tqdm==4.66.5
+tqdm==4.68.3
 
 # Environment & Configuration
-python-dotenv==1.0.1
-pyyaml==6.0.2
+python-dotenv==1.2.2
+pyyaml==6.0.3
 
 # Testing
-pytest==8.3.4
-pytest-cov==6.0.0
-pytest-mock==3.14.0
-moto==5.0.21  # Mock AWS services
-responses==0.25.3  # Mock HTTP requests
+pytest==9.1.1
+pytest-cov==7.1.0
+pytest-mock==3.15.1
+moto==5.2.2  # Mock AWS services
+responses==0.26.1  # Mock HTTP requests
 
 # Security: Ensure safe dependencies
-certifi>=2024.8.30
-urllib3>=2.2.3
-requests>=2.32.3
-cryptography>=43.0.0
-idna>=3.10
+certifi>=2026.6.17
+urllib3>=2.7.0
+requests>=2.34.2
+cryptography>=49.0.0
+idna>=3.18
